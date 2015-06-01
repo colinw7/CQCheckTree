@@ -1,5 +1,7 @@
 TEMPLATE = lib
 
+QT += widgets
+
 TARGET = CQCheckTree
 
 DEPENDPATH += .
