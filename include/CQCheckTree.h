@@ -7,7 +7,9 @@
 class CQCheckTree;
 class CQCheckTreeCheck;
 
-typedef std::pair<int,int> CQCheckTreeIndex;
+using CQCheckTreeIndex = std::pair<int, int>;
+
+//---
 
 class CQCheckTreeSection : public QTreeWidgetItem {
  public:
@@ -27,7 +29,7 @@ class CQCheckTreeSection : public QTreeWidgetItem {
 
   int addCheck(CQCheckTreeCheck *check);
 
-  uint numChecks() const { return checks_.size(); }
+  uint numChecks() const { return uint(checks_.size()); }
 
  private:
   friend class CQCheckTree;
@@ -42,12 +44,14 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   int checkInd(CQCheckTreeCheck *) const;
 
  private:
-  typedef std::vector<CQCheckTreeCheck *> Checks;
+  using Checks = std::vector<CQCheckTreeCheck *>;
 
-  CQCheckTree *tree_;
+  CQCheckTree *tree_ { nullptr };
   QString      text_;
   Checks       checks_;
 };
+
+//---
 
 class CQCheckTreeCheck : public QTreeWidgetItem {
  public:
@@ -73,16 +77,18 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
   }
 
  private:
-  CQCheckTreeSection *section_;
+  CQCheckTreeSection *section_ { nullptr };
   QString             text_;
-  bool                checked_;
+  bool                checked_ { false };
 };
+
+//---
 
 class CQCheckTree : public QWidget {
   Q_OBJECT
 
  public:
-  CQCheckTree(QWidget *parent=0);
+  CQCheckTree(QWidget *parent=nullptr);
 
   int addSection(const QString &section);
 
@@ -116,9 +122,9 @@ class CQCheckTree : public QWidget {
   void itemClicked(const CQCheckTreeIndex &ind);
 
  private:
-  typedef std::vector<CQCheckTreeSection *> Sections;
+  using Sections = std::vector<CQCheckTreeSection *>;
 
-  QTreeWidget *tree_;
+  QTreeWidget *tree_ { nullptr };
   Sections     sections_;
 };
 

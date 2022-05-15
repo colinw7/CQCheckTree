@@ -13,9 +13,10 @@ class CQCheckTreeDelegate : public QItemDelegate {
  public:
   CQCheckTreeDelegate(CQCheckTree *tree);
 
-  void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+  void paint(QPainter *painter, const QStyleOptionViewItem &option,
+             const QModelIndex &index) const override;
 
-  QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+  QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
  private:
   CQCheckTree *tree_;
@@ -27,7 +28,7 @@ CQCheckTree::
 CQCheckTree(QWidget *parent) :
  QWidget(parent)
 {
-  QVBoxLayout *layout = new QVBoxLayout(this);
+  auto *layout = new QVBoxLayout(this);
   layout->setMargin(0); layout->setSpacing(0);
 
   tree_ = new QTreeWidget(this);
@@ -57,13 +58,13 @@ int
 CQCheckTree::
 addSection(const QString &section)
 {
-  CQCheckTreeSection *sectionItem = new CQCheckTreeSection(this, section);
+  auto *sectionItem = new CQCheckTreeSection(this, section);
 
   tree_->addTopLevelItem(sectionItem);
 
   sections_.push_back(sectionItem);
 
-  return sections_.size() - 1;
+  return int(sections_.size() - 1);
 }
 
 CQCheckTreeIndex
@@ -73,9 +74,9 @@ addCheck(int sectionInd, const QString &text)
   if (sectionInd < 0 || sectionInd >= int(sections_.size()))
     return CQCheckTreeIndex(-1,-1);
 
-  CQCheckTreeSection *sectionItem = sections_[sectionInd];
+  auto *sectionItem = sections_[size_t(sectionInd)];
 
-  CQCheckTreeCheck *checkItem = new CQCheckTreeCheck(sectionItem, text);
+  auto *checkItem = new CQCheckTreeCheck(sectionItem, text);
 
   int itemInd = sectionItem->addCheck(checkItem);
 
@@ -92,7 +93,7 @@ isItemChecked(const CQCheckTreeIndex &ind) const
   if (sectionInd < 0 || sectionInd >= int(sections_.size()))
     return false;
 
-  CQCheckTreeSection *sectionItem = sections_[sectionInd];
+  auto *sectionItem = sections_[size_t(sectionInd)];
 
   return sectionItem->isItemChecked(checkInd);
 }
@@ -104,7 +105,7 @@ getSectionText(int sectionInd) const
   if (sectionInd < 0 || sectionInd >= int(sections_.size()))
     return "";
 
-  CQCheckTreeSection *sectionItem = sections_[sectionInd];
+  auto *sectionItem = sections_[size_t(sectionInd)];
 
   return sectionItem->text();
 }
@@ -119,7 +120,7 @@ getItemText(const CQCheckTreeIndex &ind) const
   if (sectionInd < 0 || sectionInd >= int(sections_.size()))
     return "";
 
-  CQCheckTreeSection *sectionItem = sections_[sectionInd];
+  auto *sectionItem = sections_[size_t(sectionInd)];
 
   return sectionItem->getItemText(checkInd);
 }
@@ -133,7 +134,7 @@ getModelItem(const QModelIndex &index) const
   if (! index.parent().isValid())
     item = tree_->topLevelItem(index.row());
   else {
-    QTreeWidgetItem *parent = getModelItem(index.parent());
+    auto *parent = getModelItem(index.parent());
     assert(parent);
 
     item = parent->child(index.row());
@@ -146,36 +147,40 @@ void
 CQCheckTree::
 itemClicked(const QModelIndex &index)
 {
-  QTreeWidgetItem *item = getModelItem(index);
+  auto *item = getModelItem(index);
   if (! item) return;
 
   if (index.column() != 1)
     return;
 
   if      (item->type() == CQCheckTreeSection::ITEM_ID) {
-    CQCheckTreeSection *section = static_cast<CQCheckTreeSection *>(item);
+    auto *section = static_cast<CQCheckTreeSection *>(item);
 
-    Qt::CheckState checkState = section->checkState();
+    auto checkState = section->checkState();
 
     section->setChecked(checkState != Qt::Checked);
 
     tree_->update(index);
 
-    for (uint i = 0; i < section->numChecks(); ++i)
-      tree_->update(index.child(i, 1));
+    for (uint i = 0; i < section->numChecks(); ++i) {
+      //auto ind = index.child(int(i), 1);
+      auto ind = index.model()->index(int(i), 1, index);
+
+      tree_->update(ind);
+    }
 
     emit sectionClicked(index.row());
   }
   else if (item->type() == CQCheckTreeCheck::ITEM_ID) {
-    CQCheckTreeCheck *check = static_cast<CQCheckTreeCheck *>(item);
+    auto *check = static_cast<CQCheckTreeCheck *>(item);
 
     check->setChecked(! check->isChecked());
 
     tree_->update(index);
 
-    QModelIndex pi = index.parent();
+    auto pi = index.parent();
 
-    QModelIndex pi1 = tree_->model()->index(pi.row(), 1);
+    auto pi1 = tree_->model()->index(pi.row(), 1);
 
     tree_->update(pi1);
 
@@ -199,7 +204,7 @@ sectionInd(CQCheckTreeSection *section) const
 {
   for (uint i = 0; i < sections_.size(); ++i)
     if (sections_[i] == section)
-      return i;
+      return int(i);
 
   return -1;
 }
@@ -217,18 +222,18 @@ CQCheckTreeDelegate::
 paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
   if (index.column() == 1) {
-    QTreeWidgetItem *item = tree_->getModelItem(index);
+    auto *item = tree_->getModelItem(index);
     assert(item);
 
-    Qt::CheckState checkState = Qt::Unchecked;
+    auto checkState = Qt::Unchecked;
 
     if      (item->type() == CQCheckTreeSection::ITEM_ID) {
-      CQCheckTreeSection *section = static_cast<CQCheckTreeSection *>(item);
+      auto *section = static_cast<CQCheckTreeSection *>(item);
 
       checkState = section->checkState();
     }
     else if (item->type() == CQCheckTreeCheck::ITEM_ID) {
-      CQCheckTreeCheck *check = static_cast<CQCheckTreeCheck *>(item);
+      auto *check = static_cast<CQCheckTreeCheck *>(item);
 
       checkState = (check->isChecked() ? Qt::Checked : Qt::Unchecked);
     }
@@ -300,7 +305,7 @@ addCheck(CQCheckTreeCheck *check)
 
   checks_.push_back(check);
 
-  return checks_.size() - 1;
+  return int(checks_.size() - 1);
 }
 
 bool
@@ -310,7 +315,7 @@ isItemChecked(int checkInd) const
   if (checkInd < 0 || checkInd >= int(checks_.size()))
     return false;
 
-  CQCheckTreeCheck *checkItem = checks_[checkInd];
+  auto *checkItem = checks_[size_t(checkInd)];
 
   return checkItem->isChecked();
 }
@@ -322,7 +327,7 @@ getItemText(int checkInd) const
   if (checkInd < 0 || checkInd >= int(checks_.size()))
     return "";
 
-  CQCheckTreeCheck *checkItem = checks_[checkInd];
+  auto *checkItem = checks_[size_t(checkInd)];
 
   return checkItem->text();
 }
@@ -343,7 +348,7 @@ checkInd(CQCheckTreeCheck *check) const
 {
   for (uint i = 0; i < checks_.size(); ++i)
     if (checks_[i] == check)
-      return i;
+      return int(i);
 
   return -1;
 }
