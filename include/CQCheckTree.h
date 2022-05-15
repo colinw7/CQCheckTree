@@ -92,6 +92,8 @@ class CQCheckTree : public QWidget {
   CQCheckTree(QWidget *parent=nullptr);
  ~CQCheckTree();
 
+  void setHeaders(const QStringList &headers);
+
   void clear();
 
   int addSection(const QString &section);
@@ -101,6 +103,9 @@ class CQCheckTree : public QWidget {
   bool isItemChecked(const CQCheckTreeIndex &ind) const;
   void setItemChecked(const CQCheckTreeIndex &ind, bool checked);
 
+  bool hasSection(const CQCheckTreeIndex &ind) const;
+
+  QString getSectionText(const CQCheckTreeIndex &ind) const;
   QString getSectionText(int ind) const;
 
   QString getItemText(const CQCheckTreeIndex &ind) const;

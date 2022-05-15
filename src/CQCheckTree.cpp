@@ -61,6 +61,15 @@ CQCheckTree::
 
 void
 CQCheckTree::
+setHeaders(const QStringList &headers)
+{
+  if (headers.size() != 2) return;
+
+  tree_->setHeaderLabels(headers);
+}
+
+void
+CQCheckTree::
 clear()
 {
   tree_->clear();
@@ -139,11 +148,25 @@ setItemChecked(const CQCheckTreeIndex &ind, bool checked)
     item->setChecked(checked);
 
     return;
-  };
+  }
 
   auto *sectionItem = sections_[size_t(sectionInd)];
 
   sectionItem->setItemChecked(checkInd, checked);
+}
+
+bool
+CQCheckTree::
+hasSection(const CQCheckTreeIndex &ind) const
+{
+  return (ind.first >= 0 && ind.first < int(sections_.size()));
+}
+
+QString
+CQCheckTree::
+getSectionText(const CQCheckTreeIndex &ind) const
+{
+  return getSectionText(ind.first);
 }
 
 QString

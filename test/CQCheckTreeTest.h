@@ -1,5 +1,5 @@
 #include <QWidget>
-#include <CQCheckTree.h>
+#include <CQCheckTree/CQCheckTree.h>
 
 class CQCheckTreeTest : public QWidget {
   Q_OBJECT
