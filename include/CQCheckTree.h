@@ -21,7 +21,7 @@ class CQCheckTreeSection : public QTreeWidgetItem {
     setData(0, Qt::DisplayRole, QVariant(text_));
   }
 
-  const QString text() const { return text_; }
+  const QString &text() const { return text_; }
 
   Qt::CheckState checkState() const;
 
@@ -36,6 +36,7 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   friend class CQCheckTreeCheck;
 
   bool isItemChecked(int checkInd) const;
+  void setItemChecked(int checkInd, bool checked);
 
   QString getItemText(int checkInd) const;
 
@@ -63,7 +64,7 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
     setData(0, Qt::DisplayRole, QVariant(text_));
   }
 
-  const QString text() const { return text_; }
+  const QString &text() const { return text_; }
 
   bool isChecked() const { return checked_; }
 
@@ -89,12 +90,16 @@ class CQCheckTree : public QWidget {
 
  public:
   CQCheckTree(QWidget *parent=nullptr);
+ ~CQCheckTree();
+
+  void clear();
 
   int addSection(const QString &section);
 
   CQCheckTreeIndex addCheck(int sectionInd, const QString &text);
 
   bool isItemChecked(const CQCheckTreeIndex &ind) const;
+  void setItemChecked(const CQCheckTreeIndex &ind, bool checked);
 
   QString getSectionText(int ind) const;
 
