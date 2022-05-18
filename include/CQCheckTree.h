@@ -16,12 +16,12 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   enum { ITEM_ID = QTreeWidgetItem::UserType + 101 };
 
  public:
-  CQCheckTreeSection(CQCheckTree *tree, const QString &text) :
-   QTreeWidgetItem(ITEM_ID), tree_(tree), text_(text) {
-    setData(0, Qt::DisplayRole, QVariant(text_));
-  }
+  CQCheckTreeSection(CQCheckTree *tree, const QString &text);
 
   const QString &text() const { return text_; }
+
+  int ind() const { return ind_; }
+  void setInd(int i) { ind_ = i; }
 
   Qt::CheckState checkState() const;
 
@@ -49,6 +49,7 @@ class CQCheckTreeSection : public QTreeWidgetItem {
 
   CQCheckTree *tree_ { nullptr };
   QString      text_;
+  int          ind_  { -1 };
   Checks       checks_;
 };
 
@@ -59,16 +60,19 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
   enum { ITEM_ID = QTreeWidgetItem::UserType + 102 };
 
  public:
-  CQCheckTreeCheck(CQCheckTreeSection *section, const QString &text) :
-   QTreeWidgetItem(ITEM_ID), section_(section), text_(text), checked_(false) {
-    setData(0, Qt::DisplayRole, QVariant(text_));
-  }
+  CQCheckTreeCheck(CQCheckTree *tree, CQCheckTreeSection *section, const QString &text);
+
+  CQCheckTree *tree() const { return tree_; }
+
+  CQCheckTreeSection *section() const { return section_; }
 
   const QString &text() const { return text_; }
 
   bool isChecked() const { return checked_; }
-
   void setChecked(bool checked);
+
+  int ind() const { return ind_; }
+  void setInd(int i) { ind_ = i; }
 
   QVariant data(int col, int role) const {
     if (role == Qt::ToolTipRole && col == 0)
@@ -78,8 +82,10 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
   }
 
  private:
+  CQCheckTree        *tree_    { nullptr };
   CQCheckTreeSection *section_ { nullptr };
   QString             text_;
+  int                 ind_     { -1 };
   bool                checked_ { false };
 };
 
@@ -113,6 +119,7 @@ class CQCheckTree : public QWidget {
  private:
   friend class CQCheckTreeSection;
   friend class CQCheckTreeDelegate;
+  friend class CQCheckTreeCheck;
 
   QTreeWidget *tree() const { return tree_; }
 
@@ -120,7 +127,7 @@ class CQCheckTree : public QWidget {
 
   void emitChecked(CQCheckTreeSection *section, int itemNum, bool checked);
 
-  int sectionInd(CQCheckTreeSection *) const;
+  //int sectionInd(CQCheckTreeSection *) const;
 
  private slots:
   void itemClicked(const QModelIndex &index);
@@ -133,9 +140,11 @@ class CQCheckTree : public QWidget {
 
  private:
   using Sections = std::vector<CQCheckTreeSection *>;
+  using Checks   = std::vector<CQCheckTreeCheck *>;
 
   QTreeWidget *tree_ { nullptr };
   Sections     sections_;
+  Checks       checks_;
 };
 
 #endif
