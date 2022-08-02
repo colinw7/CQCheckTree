@@ -22,7 +22,7 @@ class CQCheckTreeDelegate : public QItemDelegate {
   QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
  private:
-  CQCheckTree *tree_;
+  CQCheckTree *tree_ { nullptr };
 };
 
 //------
@@ -37,10 +37,12 @@ CQCheckTree(QWidget *parent) :
   layout->setMargin(0); layout->setSpacing(0);
 
   tree_ = new QTreeWidget(this);
+  tree_->setObjectName("tree");
 
   tree_->setItemDelegate(new CQCheckTreeDelegate(this));
 
   tree_->setSelectionBehavior(QAbstractItemView::SelectItems);
+  tree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   tree_->setSelectionMode(QAbstractItemView::NoSelection);
 
@@ -354,9 +356,9 @@ itemClicked(const QModelIndex &index)
     }
 
     if (section->section())
-      emit subSectionClicked(section->section()->ind(), section->ind());
+      Q_EMIT subSectionClicked(section->section()->ind(), section->ind());
     else
-      emit sectionClicked(section->ind());
+      Q_EMIT sectionClicked(section->ind());
   }
   else if (item->type() == CQCheckTreeCheck::ITEM_ID) {
     auto *check = static_cast<CQCheckTreeCheck *>(item);
@@ -380,9 +382,9 @@ itemClicked(const QModelIndex &index)
     }
 
     if (section && section->section())
-      emit itemClicked(CQCheckTreeIndex(section->section()->ind(), sectionInd, check->ind()));
+      Q_EMIT itemClicked(CQCheckTreeIndex(section->section()->ind(), sectionInd, check->ind()));
     else
-      emit itemClicked(CQCheckTreeIndex(sectionInd, check->ind()));
+      Q_EMIT itemClicked(CQCheckTreeIndex(sectionInd, check->ind()));
   }
 }
 
@@ -393,9 +395,9 @@ emitChecked(CQCheckTreeSection *section, int itemNum, bool checked)
   int sectionInd = (section ? section->ind() : -1);
 
   if (section && section->section())
-    emit itemChecked(CQCheckTreeIndex(section->section()->ind(), sectionInd, itemNum), checked);
+    Q_EMIT itemChecked(CQCheckTreeIndex(section->section()->ind(), sectionInd, itemNum), checked);
   else
-    emit itemChecked(CQCheckTreeIndex(sectionInd, itemNum), checked);
+    Q_EMIT itemChecked(CQCheckTreeIndex(sectionInd, itemNum), checked);
 }
 
 #if 0
@@ -444,12 +446,15 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
 
     painter->save();
 
-    int dy = (option.rect.height() - CHECK_SIZE)/2;
+    //int checkSize = tree_->style()->pixelMetric(QStyle::PM_IndicatorHeight);
+    int checkSize = CHECK_SIZE;
+
+    int dy = (option.rect.height() - checkSize)/2;
 
     int x = option.rect.left() + 2;
     int y = option.rect.top () + dy;
 
-    QRect rect(x, y, CHECK_SIZE, CHECK_SIZE);
+    QRect rect(x, y, checkSize, checkSize);
 
     drawCheck(painter, option, rect, checkState);
 
@@ -463,8 +468,12 @@ QSize
 CQCheckTreeDelegate::
 sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-  if (index.column() == 1)
-    return QSize(CHECK_SIZE, CHECK_SIZE);
+  if (index.column() == 1) {
+    //int checkSize = tree_->style()->pixelMetric(QStyle::PM_IndicatorHeight);
+    int checkSize = CHECK_SIZE;
+
+    return QSize(checkSize, checkSize);
+  }
   else
     return QItemDelegate::sizeHint(option, index);
 }
