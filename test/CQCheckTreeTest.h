@@ -1,5 +1,5 @@
 #include <QWidget>
-#include <CQCheckTree/CQCheckTree.h>
+#include <CQCheckTree.h>
 
 class CQCheckTreeTest : public QWidget {
   Q_OBJECT
@@ -10,7 +10,8 @@ class CQCheckTreeTest : public QWidget {
  private slots:
   void itemChecked(const CQCheckTreeIndex &ind, bool checked);
 
-  void sectionClicked(int ind);
+  void sectionClicked(int sectionInd);
+  void subSectionClicked(int sectionInd, int subSectionInd);
 
   void itemClicked(const CQCheckTreeIndex &ind);
 

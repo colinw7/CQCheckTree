@@ -1,8 +1,10 @@
 TEMPLATE = app
 
-TARGET = 
+TARGET = CQCheckTreeTest
 
 DEPENDPATH += .
+
+QT += widgets
 
 #CONFIG += debug
 
