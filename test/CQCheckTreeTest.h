@@ -15,6 +15,8 @@ class CQCheckTreeTest : public QWidget {
 
   void itemClicked(const CQCheckTreeIndex &ind);
 
+  void printState();
+
  private:
-  CQCheckTree *tree_;
+  CQCheckTree *tree_ { nullptr };
 };

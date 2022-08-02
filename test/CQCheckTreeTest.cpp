@@ -40,27 +40,27 @@ CQCheckTreeTest(QWidget *parent) :
 
   tree_->setHeaders(QStringList() << "Item" << "Checked");
 
-  int section1 = tree_->addSection("Section 1");
+  auto section1 = tree_->addSection("Section 1");
 
   /* auto check1 = */ tree_->addCheck(section1, "One");
   /* auto check2 = */ tree_->addCheck(section1, "Two");
   /* auto check3 = */ tree_->addCheck(section1, "Three");
   /* auto check4 = */ tree_->addCheck(section1, "Four");
 
-  /* auto check5 = */ tree_->addCheck(-1, "Five");
+  /* auto check5 = */ tree_->addCheck("Five");
 
-  int section2 = tree_->addSection("Section 2");
+  auto section2 = tree_->addSection("Section 2");
 
   /* auto check6 = */ tree_->addCheck(section2, "Six");
   /* auto check7 = */ tree_->addCheck(section2, "Seven");
   /* auto check8 = */ tree_->addCheck(section2, "Eight");
   /* auto check9 = */ tree_->addCheck(section2, "Nine");
 
-  int subSection1 = tree_->addSubSection(section2, "Sub Section 1");
+  auto subSection1 = tree_->addSection(section2, "Sub Section 1");
 
-  /* auto subCheck1 = */ tree_->addCheck(section2, subSection1, "Eleven");
+  /* auto subCheck1 = */ tree_->addCheck(subSection1, "Eleven");
 
-  /* auto check10 = */ tree_->addCheck(-1, "Ten");
+  /* auto check10 = */ tree_->addCheck("Ten");
 
   connect(tree_, SIGNAL(itemChecked(const CQCheckTreeIndex &, bool)),
           this, SLOT(itemChecked(const CQCheckTreeIndex &, bool)));
@@ -74,6 +74,8 @@ CQCheckTreeTest(QWidget *parent) :
   layout->addWidget(tree_);
 
   //layout->addStretch(1);
+
+  tree_->fitColumns();
 }
 
 void
@@ -88,6 +90,8 @@ itemChecked(const CQCheckTreeIndex &ind, bool /*checked*/)
 
   std::cerr << "Item "<< name.toStdString() << " " <<
                (checked ? "Checked" : "Unchecked") << "\n";
+
+  printState();
 }
 
 void
@@ -103,7 +107,7 @@ void
 CQCheckTreeTest::
 subSectionClicked(int sectionInd, int subSectionInd)
 {
-  auto name = tree_->getSubSectionText(sectionInd, subSectionInd);
+  auto name = tree_->getSectionText(sectionInd, subSectionInd);
 
   std::cerr << "Sub Section " << name.toStdString() << " clicked\n";
 }
@@ -118,4 +122,16 @@ itemClicked(const CQCheckTreeIndex &ind)
     name = tree_->getSectionText(ind) + ":" + name;
 
   std::cerr << "Item " << name.toStdString() << " clicked\n";
+}
+
+void
+CQCheckTreeTest::
+printState()
+{
+  std::cerr << "Checked\n";
+
+  auto items = tree_->getCheckedItems();
+
+  for (const auto *item : items)
+    std::cerr << "  " << item->hierName().toStdString() << "\n";
 }

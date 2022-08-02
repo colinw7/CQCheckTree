@@ -29,9 +29,25 @@ struct CQCheckTreeIndex {
 
 //---
 
-class CQCheckTreeSection : public QTreeWidgetItem {
+class CQCheckTreeItem : public QTreeWidgetItem {
  public:
-  enum { ITEM_ID = QTreeWidgetItem::UserType + 101 };
+  CQCheckTreeItem(int id);
+
+  virtual ~CQCheckTreeItem() { }
+
+  virtual QString hierName() const = 0;
+};
+
+//---
+
+class CQCheckTreeSection : public CQCheckTreeItem {
+ public:
+  using Items    = std::vector<CQCheckTreeItem *>;
+  using Sections = std::vector<CQCheckTreeSection *>;
+  using Checks   = std::vector<CQCheckTreeCheck *>;
+
+ public:
+  enum { ITEM_ID = CQCheckTreeItem::UserType + 101 };
 
  public:
   CQCheckTreeSection(CQCheckTree *tree, const QString &text);
@@ -46,13 +62,22 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   int ind() const { return ind_; }
   void setInd(int i) { ind_ = i; }
 
+  const Sections &sections() const { return sections_; }
+  const Checks &checks() const { return checks_; }
+
+  //---
+
+  QString hierName() const override;
+
+  //---
+
   Qt::CheckState checkState() const;
 
   void setChecked(bool checked);
 
   int addSection(const QString &section);
 
-  CQCheckTreeIndex addCheck(int sectionInd, const QString &name);
+  int addCheck(int sectionInd, const QString &name);
 
   int addCheck(CQCheckTreeCheck *check);
 
@@ -61,6 +86,8 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   QString getSectionText(int ind) const;
 
   void updateInds(const QModelIndex &parent) const;
+
+  Items getCheckedItems() const;
 
  private:
   friend class CQCheckTree;
@@ -82,9 +109,6 @@ class CQCheckTreeSection : public QTreeWidgetItem {
   int checkInd(CQCheckTreeCheck *) const;
 
  private:
-  using Sections = std::vector<CQCheckTreeSection *>;
-  using Checks   = std::vector<CQCheckTreeCheck *>;
-
   CQCheckTree        *tree_    { nullptr };
   CQCheckTreeSection *section_ { nullptr };
   QString             text_;
@@ -95,9 +119,9 @@ class CQCheckTreeSection : public QTreeWidgetItem {
 
 //---
 
-class CQCheckTreeCheck : public QTreeWidgetItem {
+class CQCheckTreeCheck : public CQCheckTreeItem {
  public:
-  enum { ITEM_ID = QTreeWidgetItem::UserType + 102 };
+  enum { ITEM_ID = CQCheckTreeItem::UserType + 102 };
 
  public:
   CQCheckTreeCheck(CQCheckTree *tree, CQCheckTreeSection *section, const QString &text);
@@ -108,17 +132,23 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
 
   const QString &text() const { return text_; }
 
+  //---
+
+  QString hierName() const override;
+
+  //---
+
   bool isChecked() const { return checked_; }
   void setChecked(bool checked);
 
   int ind() const { return ind_; }
   void setInd(int i) { ind_ = i; }
 
-  QVariant data(int col, int role) const {
+  QVariant data(int col, int role) const override {
     if (role == Qt::ToolTipRole && col == 0)
       return QString(text_);
     else
-      return QTreeWidgetItem::data(col, role);
+      return CQCheckTreeItem::data(col, role);
   }
 
  private:
@@ -131,24 +161,53 @@ class CQCheckTreeCheck : public QTreeWidgetItem {
 
 //---
 
-class CQCheckTree : public QWidget {
+class CQCheckTreeWidget : public QTreeWidget {
   Q_OBJECT
+
+ public:
+  CQCheckTreeWidget(CQCheckTree *tree);
+
+  void setHeaderLabels(const QStringList &labels);
+
+ private:
+  CQCheckTree *tree_ { nullptr };
+};
+
+//---
+
+class CQCheckTree : public QFrame {
+  Q_OBJECT
+
+ public:
+  using Items    = std::vector<CQCheckTreeItem *>;
+  using Sections = std::vector<CQCheckTreeSection *>;
+  using Checks   = std::vector<CQCheckTreeCheck *>;
 
  public:
   CQCheckTree(QWidget *parent=nullptr);
  ~CQCheckTree();
 
+  QTreeWidget *tree() const { return tree_; }
+
+  const Sections &sections() const { return sections_; }
+  const Checks &checks() const { return checks_; }
+
+  //---
+
   void setHeaders(const QStringList &headers);
 
   void clear();
 
-  int addSection(const QString &section);
+  // add section
+  CQCheckTreeIndex addSection(const QString &section);
+  CQCheckTreeIndex addSection(const CQCheckTreeIndex &ind, const QString &section);
+  CQCheckTreeIndex addSection(int sectionInd, const QString &section);
 
-  int addSubSection(int sectionInd, const QString &section);
-
+  // add check
+  CQCheckTreeIndex addCheck(const QString &name);
+  CQCheckTreeIndex addCheck(const CQCheckTreeIndex &ind, const QString &name);
+  CQCheckTreeIndex addCheck(int subSectionInd, const QString &name);
   CQCheckTreeIndex addCheck(int sectionInd, int subSectionInd, const QString &name);
-
-  CQCheckTreeIndex addCheck(int sectionInd, const QString &text);
 
   bool isItemChecked(const CQCheckTreeIndex &ind) const;
   void setItemChecked(const CQCheckTreeIndex &ind, bool checked);
@@ -157,25 +216,32 @@ class CQCheckTree : public QWidget {
 
   QString getSectionText(const CQCheckTreeIndex &ind) const;
   QString getSectionText(int sectionInd) const;
-  QString getSubSectionText(int sectionInd, int subSectionInd) const;
+  QString getSectionText(int sectionInd, int subSectionInd) const;
 
   QString getItemText(const CQCheckTreeIndex &ind) const;
+
+  Items getCheckedItems() const;
 
  private:
   friend class CQCheckTreeSection;
   friend class CQCheckTreeDelegate;
   friend class CQCheckTreeCheck;
 
-  QTreeWidget *tree() const { return tree_; }
-
-  QTreeWidgetItem *getModelItem(const QModelIndex &index) const;
+  CQCheckTreeItem *getModelItem(const QModelIndex &index) const;
 
   void emitChecked(CQCheckTreeSection *section, int itemNum, bool checked);
 
   //int sectionInd(CQCheckTreeSection *) const;
 
+ public Q_SLOTS:
+  void expandAll();
+  void collapseAll();
+  void fitColumns();
+
  private Q_SLOTS:
   void itemClicked(const QModelIndex &index);
+
+  void customContextMenuSlot(const QPoint &pos);
 
  Q_SIGNALS:
   void itemChecked(const CQCheckTreeIndex &ind, bool checked);
@@ -185,12 +251,10 @@ class CQCheckTree : public QWidget {
   void itemClicked(const CQCheckTreeIndex &ind);
 
  private:
-  using Sections = std::vector<CQCheckTreeSection *>;
-  using Checks   = std::vector<CQCheckTreeCheck *>;
-
   QTreeWidget *tree_ { nullptr };
   Sections     sections_;
   Checks       checks_;
+  QPoint       menuPos_;
 };
 
 #endif

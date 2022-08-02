@@ -1,9 +1,11 @@
 #include <CQCheckTree.h>
 
+#include <QHeaderView>
 #include <QVBoxLayout>
 #include <QItemDelegate>
 #include <QPainter>
 #include <QMouseEvent>
+#include <QMenu>
 
 #include <cassert>
 #include <iostream>
@@ -29,36 +31,27 @@ class CQCheckTreeDelegate : public QItemDelegate {
 
 CQCheckTree::
 CQCheckTree(QWidget *parent) :
- QWidget(parent)
+ QFrame(parent)
 {
   setObjectName("checkTree");
 
   auto *layout = new QVBoxLayout(this);
   layout->setMargin(0); layout->setSpacing(0);
 
-  tree_ = new QTreeWidget(this);
-  tree_->setObjectName("tree");
-
-  tree_->setItemDelegate(new CQCheckTreeDelegate(this));
-
-  tree_->setSelectionBehavior(QAbstractItemView::SelectItems);
-  tree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-  tree_->setSelectionMode(QAbstractItemView::NoSelection);
+  tree_ = new CQCheckTreeWidget(this);
 
   layout->addWidget(tree_);
 
-  tree_->setColumnCount(2);
-
-  QStringList headers;
-
-  headers.push_back("Type");
-  headers.push_back("Selected");
-
-  tree_->setHeaderLabels(headers);
-
   connect(tree_, SIGNAL(clicked(const QModelIndex &)),
           this, SLOT(itemClicked(const QModelIndex &)));
+
+  //---
+
+  // add menu
+  setContextMenuPolicy(Qt::CustomContextMenu);
+
+  connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
+          this, SLOT(customContextMenuSlot(const QPoint&)));
 }
 
 CQCheckTree::
@@ -70,8 +63,6 @@ void
 CQCheckTree::
 setHeaders(const QStringList &headers)
 {
-  if (headers.size() != 2) return;
-
   tree_->setHeaderLabels(headers);
 }
 
@@ -85,7 +76,7 @@ clear()
   checks_  .clear();
 }
 
-int
+CQCheckTreeIndex
 CQCheckTree::
 addSection(const QString &section)
 {
@@ -99,45 +90,72 @@ addSection(const QString &section)
 
   sectionItem->setInd(n);
 
-  return n;
+  return CQCheckTreeIndex(n, -1, -1);
 }
 
-int
+CQCheckTreeIndex
 CQCheckTree::
-addSubSection(int sectionInd, const QString &section)
+addSection(const CQCheckTreeIndex &ind, const QString &section)
+{
+  assert(ind.itemInd == -1);
+  assert(ind.subSectionInd == -1);
+
+  return addSection(ind.sectionInd, section);
+}
+
+CQCheckTreeIndex
+CQCheckTree::
+addSection(int sectionInd, const QString &section)
 {
   assert(sectionInd >= 0 && sectionInd < int(sections_.size()));
 
   auto *sectionItem = sections_[size_t(sectionInd)];
 
-  return sectionItem->addSection(section);
+  auto n = sectionItem->addSection(section);
+
+  return CQCheckTreeIndex(sectionInd, n, -1);
 }
 
 CQCheckTreeIndex
 CQCheckTree::
-addCheck(int sectionInd, const QString &text)
+addCheck(const QString &name)
 {
   // add toplevel item
-  if (sectionInd < 0 || sectionInd >= int(sections_.size())) {
-    auto *checkItem = new CQCheckTreeCheck(this, nullptr, text);
+  auto *checkItem = new CQCheckTreeCheck(this, nullptr, name);
 
-    tree_->addTopLevelItem(checkItem);
+  tree_->addTopLevelItem(checkItem);
 
-    checks_.push_back(checkItem);
+  checks_.push_back(checkItem);
 
-    int n = int(checks_.size() - 1);
+  int n = int(checks_.size() - 1);
 
-    checkItem->setInd(n);
+  checkItem->setInd(n);
 
-    return CQCheckTreeIndex(checkItem->ind()); // root
-  }
+  return CQCheckTreeIndex(checkItem->ind()); // root
+}
 
-  //---
+CQCheckTreeIndex
+CQCheckTree::
+addCheck(const CQCheckTreeIndex &ind, const QString &name)
+{
+  assert(ind.itemInd == -1);
+
+  if (ind.subSectionInd != -1)
+    return addCheck(ind.sectionInd, ind.subSectionInd, name);
+  else
+    return addCheck(ind.sectionInd, name);
+}
+
+CQCheckTreeIndex
+CQCheckTree::
+addCheck(int sectionInd, const QString &name)
+{
+  assert(sectionInd >= 0 && sectionInd < int(sections_.size()));
 
   // add section item
   auto *sectionItem = sections_[size_t(sectionInd)];
 
-  auto *checkItem = new CQCheckTreeCheck(this, sectionItem, text);
+  auto *checkItem = new CQCheckTreeCheck(this, sectionItem, name);
 
   int itemInd = sectionItem->addCheck(checkItem);
 
@@ -148,17 +166,17 @@ addCheck(int sectionInd, const QString &text)
 
 CQCheckTreeIndex
 CQCheckTree::
-addCheck(int sectionInd, int subSectionInd, const QString &text)
+addCheck(int sectionInd, int subSectionInd, const QString &name)
 {
   // add toplevel item
   assert(sectionInd >= 0 && sectionInd < int(sections_.size()));
 
-  //---
-
   // add section item
   auto *sectionItem = sections_[size_t(sectionInd)];
 
-  return sectionItem->addCheck(subSectionInd, text);
+  int ind = sectionItem->addCheck(subSectionInd, name);
+
+  return CQCheckTreeIndex(sectionInd, subSectionInd, ind);
 }
 
 bool
@@ -260,8 +278,7 @@ QString
 CQCheckTree::
 getSectionText(int sectionInd) const
 {
-  if (sectionInd < 0 || sectionInd >= int(sections_.size()))
-    return "";
+  assert(sectionInd >= 0 && sectionInd < int(sections_.size()));
 
   auto *sectionItem = sections_[size_t(sectionInd)];
 
@@ -270,10 +287,9 @@ getSectionText(int sectionInd) const
 
 QString
 CQCheckTree::
-getSubSectionText(int sectionInd, int subSectionInd) const
+getSectionText(int sectionInd, int subSectionInd) const
 {
-  if (sectionInd < 0 || sectionInd >= int(sections_.size()))
-    return "";
+  assert(sectionInd >= 0 && sectionInd < int(sections_.size()));
 
   auto *sectionItem = sections_[size_t(sectionInd)];
 
@@ -306,7 +322,7 @@ getItemText(const CQCheckTreeIndex &ind) const
     return sectionItem->getItemText(checkInd);
 }
 
-QTreeWidgetItem *
+CQCheckTreeItem *
 CQCheckTree::
 getModelItem(const QModelIndex &index) const
 {
@@ -321,7 +337,7 @@ getModelItem(const QModelIndex &index) const
     item = parent->child(index.row());
   }
 
-  return item;
+  return dynamic_cast<CQCheckTreeItem *>(item);
 }
 
 void
@@ -400,18 +416,133 @@ emitChecked(CQCheckTreeSection *section, int itemNum, bool checked)
     Q_EMIT itemChecked(CQCheckTreeIndex(sectionInd, itemNum), checked);
 }
 
-#if 0
-int
+void
 CQCheckTree::
-sectionInd(CQCheckTreeSection *section) const
+customContextMenuSlot(const QPoint &pos)
 {
-  for (uint i = 0; i < sections_.size(); ++i)
-    if (sections_[i] == section)
-      return int(i);
+  // Map point to global from the viewport to account for the header.
+  menuPos_ = mapToGlobal(pos);
+  //menuPos_ = viewport()->mapToGlobal(pos);
 
-  return -1;
+  auto *menu = new QMenu;
+
+  //---
+
+  auto addAction = [&](const QString &text, const char *slotName) {
+    auto *action = new QAction(text, menu);
+
+    connect(action, SIGNAL(triggered()), this, slotName);
+
+    menu->addAction(action);
+
+    return action;
+  };
+
+  (void) addAction("Expand All"  , SLOT(expandAll()));
+  (void) addAction("Collapse All", SLOT(collapseAll()));
+  (void) addAction("Fit Columns" , SLOT(fitColumns()));
+
+  //---
+
+  menu->exec(menuPos_);
+
+  delete menu;
 }
-#endif
+
+void
+CQCheckTree::
+expandAll()
+{
+  for (auto *section : sections()) {
+    tree_->expandItem(section);
+
+    for (auto *section1 : section->sections())
+      tree_->expandItem(section1);
+  }
+
+  fitColumns();
+}
+
+void
+CQCheckTree::
+collapseAll()
+{
+  for (auto *section : sections()) {
+    tree_->collapseItem(section);
+
+    for (auto *section1 : section->sections())
+      tree_->collapseItem(section1);
+  }
+
+  fitColumns();
+}
+
+void
+CQCheckTree::
+fitColumns()
+{
+  tree_->resizeColumnToContents(0);
+  tree_->resizeColumnToContents(1);
+
+  tree_->header()->setStretchLastSection(false);
+  tree_->header()->setStretchLastSection(true);
+}
+
+CQCheckTree::Items
+CQCheckTree::
+getCheckedItems() const
+{
+  Items items;
+
+  for (auto *section : sections_) {
+    if (section->checkState() == Qt::Checked)
+      items.push_back(section);
+
+    auto items1 = section->getCheckedItems();
+
+    for (auto *item1 : items1)
+      items.push_back(item1);
+  }
+
+  for (auto *check : checks_)
+    if (check->isChecked())
+      items.push_back(check);
+
+  return items;
+}
+
+//------
+
+CQCheckTreeWidget::
+CQCheckTreeWidget(CQCheckTree *tree) :
+ tree_(tree)
+{
+  setObjectName("tree");
+
+  setSelectionBehavior(QAbstractItemView::SelectItems);
+  setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+  setSelectionMode(QAbstractItemView::NoSelection);
+
+  //---
+
+  setItemDelegate(new CQCheckTreeDelegate(tree_));
+
+  //---
+
+  setHeaderLabels(QStringList() << "Type" << "Selected");
+}
+
+void
+CQCheckTreeWidget::
+setHeaderLabels(const QStringList &labels)
+{
+  assert(labels.size() == 2);
+
+  setColumnCount(2);
+
+  QTreeWidget::setHeaderLabels(labels);
+}
 
 //------
 
@@ -482,9 +613,19 @@ sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 
 CQCheckTreeSection::
 CQCheckTreeSection(CQCheckTree *tree, const QString &text) :
- QTreeWidgetItem(ITEM_ID), tree_(tree), text_(text)
+ CQCheckTreeItem(ITEM_ID), tree_(tree), text_(text)
 {
   setData(0, Qt::DisplayRole, QVariant(text_));
+}
+
+QString
+CQCheckTreeSection::
+hierName() const
+{
+  if (section_)
+    return section_->hierName() + ":" + text();
+  else
+    return text();
 }
 
 Qt::CheckState
@@ -549,7 +690,7 @@ addSection(const QString &section)
   return n;
 }
 
-CQCheckTreeIndex
+int
 CQCheckTreeSection::
 addCheck(int sectionInd, const QString &text)
 {
@@ -566,7 +707,7 @@ addCheck(int sectionInd, const QString &text)
 
   checkItem->setInd(itemInd);
 
-  return CQCheckTreeIndex(ind(), sectionInd, itemInd); // sub section
+  return itemInd;
 }
 
 int
@@ -712,13 +853,46 @@ updateInds(const QModelIndex &parent) const
   }
 }
 
+CQCheckTree::Items
+CQCheckTreeSection::
+getCheckedItems() const
+{
+  Items items;
+
+  for (auto *section : sections_) {
+    if (section->checkState() == Qt::Checked)
+      items.push_back(section);
+
+    auto items1 = section->getCheckedItems();
+
+    for (auto *item1 : items1)
+      items.push_back(item1);
+  }
+
+  for (auto *check : checks_)
+    if (check->isChecked())
+      items.push_back(check);
+
+  return items;
+}
+
 //------
 
 CQCheckTreeCheck::
 CQCheckTreeCheck(CQCheckTree *tree, CQCheckTreeSection *section, const QString &text) :
- QTreeWidgetItem(ITEM_ID), tree_(tree), section_(section), text_(text)
+ CQCheckTreeItem(ITEM_ID), tree_(tree), section_(section), text_(text)
 {
   setData(0, Qt::DisplayRole, QVariant(text_));
+}
+
+QString
+CQCheckTreeCheck::
+hierName() const
+{
+  if (section_)
+    return section_->hierName() + ":" + text();
+  else
+    return text();
 }
 
 void
@@ -736,4 +910,12 @@ setChecked(bool checked)
     tree_->emitChecked(nullptr, ind(), checked_);
 
   emitDataChanged();
+}
+
+//------
+
+CQCheckTreeItem::
+CQCheckTreeItem(int id) :
+ QTreeWidgetItem(id)
+{
 }
