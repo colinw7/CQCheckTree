@@ -10,10 +10,6 @@
 #include <cassert>
 #include <iostream>
 
-namespace {
-  enum { CHECK_SIZE = 12 };
-}
-
 class CQCheckTreeDelegate : public QItemDelegate {
  public:
   CQCheckTreeDelegate(CQCheckTree *tree);
@@ -52,6 +48,12 @@ CQCheckTree(QWidget *parent) :
 
   connect(this, SIGNAL(customContextMenuRequested(const QPoint&)),
           this, SLOT(customContextMenuSlot(const QPoint&)));
+
+  //---
+
+  QFontMetrics fm(font());
+
+  checkSize_ = int(fm.height()*0.6);
 }
 
 CQCheckTree::
@@ -556,6 +558,7 @@ void
 CQCheckTreeDelegate::
 paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+  // check
   if (index.column() == 1) {
     auto *item = tree_->getModelItem(index);
     assert(item);
@@ -578,7 +581,7 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
     painter->save();
 
     //int checkSize = tree_->style()->pixelMetric(QStyle::PM_IndicatorHeight);
-    int checkSize = CHECK_SIZE;
+    int checkSize = tree_->checkSize();
 
     int dy = (option.rect.height() - checkSize)/2;
 
@@ -591,8 +594,10 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
 
     painter->restore();
   }
-  else
+  // text
+  else {
     QItemDelegate::paint(painter, option, index);
+  }
 }
 
 QSize
@@ -601,7 +606,7 @@ sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
   if (index.column() == 1) {
     //int checkSize = tree_->style()->pixelMetric(QStyle::PM_IndicatorHeight);
-    int checkSize = CHECK_SIZE;
+    int checkSize = tree_->checkSize();
 
     return QSize(checkSize, checkSize);
   }

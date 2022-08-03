@@ -18,7 +18,7 @@ main(int argc, char **argv)
 
   auto font = app.font();
 
-  font.setPointSize(20);
+  font.setPointSize(24);
 
   app.setFont(font);
 

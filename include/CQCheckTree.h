@@ -178,6 +178,8 @@ class CQCheckTreeWidget : public QTreeWidget {
 class CQCheckTree : public QFrame {
   Q_OBJECT
 
+  Q_PROPERTY(int checkSize READ checkSize WRITE setCheckSize)
+
  public:
   using Items    = std::vector<CQCheckTreeItem *>;
   using Sections = std::vector<CQCheckTreeSection *>;
@@ -188,6 +190,9 @@ class CQCheckTree : public QFrame {
  ~CQCheckTree();
 
   QTreeWidget *tree() const { return tree_; }
+
+  int checkSize() const { return checkSize_; }
+  void setCheckSize(int i) { checkSize_ = i; }
 
   const Sections &sections() const { return sections_; }
   const Checks &checks() const { return checks_; }
@@ -251,7 +256,8 @@ class CQCheckTree : public QFrame {
   void itemClicked(const CQCheckTreeIndex &ind);
 
  private:
-  QTreeWidget *tree_ { nullptr };
+  QTreeWidget *tree_      { nullptr };
+  int          checkSize_ { 12 };
   Sections     sections_;
   Checks       checks_;
   QPoint       menuPos_;
