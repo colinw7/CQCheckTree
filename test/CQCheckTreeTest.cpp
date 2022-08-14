@@ -38,29 +38,33 @@ CQCheckTreeTest(QWidget *parent) :
 
   tree_ = new CQCheckTree(this);
 
-  tree_->setHeaders(QStringList() << "Item" << "Checked");
+  for (int i = 0; i < 2; ++i) {
+    tree_->clear();
 
-  auto section1 = tree_->addSection("Section 1");
+    tree_->setHeaders(QStringList() << "Item" << "Checked");
 
-  /* auto check1 = */ tree_->addCheck(section1, "One");
-  /* auto check2 = */ tree_->addCheck(section1, "Two");
-  /* auto check3 = */ tree_->addCheck(section1, "Three");
-  /* auto check4 = */ tree_->addCheck(section1, "Four");
+    auto section1 = tree_->addSection("Section 1");
 
-  /* auto check5 = */ tree_->addCheck("Five");
+    /* auto check1 = */ tree_->addCheck(section1, "One");
+    /* auto check2 = */ tree_->addCheck(section1, "Two");
+    /* auto check3 = */ tree_->addCheck(section1, "Three");
+    /* auto check4 = */ tree_->addCheck(section1, "Four");
 
-  auto section2 = tree_->addSection("Section 2");
+    /* auto check5 = */ tree_->addCheck("Five");
 
-  /* auto check6 = */ tree_->addCheck(section2, "Six");
-  /* auto check7 = */ tree_->addCheck(section2, "Seven");
-  /* auto check8 = */ tree_->addCheck(section2, "Eight");
-  /* auto check9 = */ tree_->addCheck(section2, "Nine");
+    auto section2 = tree_->addSection("Section 2");
 
-  auto subSection1 = tree_->addSection(section2, "Sub Section 1");
+    /* auto check6 = */ tree_->addCheck(section2, "Six");
+    /* auto check7 = */ tree_->addCheck(section2, "Seven");
+    /* auto check8 = */ tree_->addCheck(section2, "Eight");
+    /* auto check9 = */ tree_->addCheck(section2, "Nine");
 
-  /* auto subCheck1 = */ tree_->addCheck(subSection1, "Eleven");
+    auto subSection1 = tree_->addSection(section2, "Sub Section 1");
 
-  /* auto check10 = */ tree_->addCheck("Ten");
+    /* auto subCheck1 = */ tree_->addCheck(subSection1, "Eleven");
+
+    /* auto check10 = */ tree_->addCheck("Ten");
+  }
 
   connect(tree_, SIGNAL(itemChecked(const CQCheckTreeIndex &, bool)),
           this, SLOT(itemChecked(const CQCheckTreeIndex &, bool)));
