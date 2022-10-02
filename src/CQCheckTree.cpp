@@ -76,6 +76,8 @@ clear()
 
   sections_.clear();
   checks_  .clear();
+
+  needsFit_ = true;
 }
 
 CQCheckTreeIndex
@@ -95,6 +97,8 @@ addSection(const QString &section)
   auto index = CQCheckTreeIndex(n, -1, -1);
 
   sectionItem->setIndex(index);
+
+  needsFit_ = true;
 
   return index;
 }
@@ -123,6 +127,8 @@ addSection(int sectionInd, const QString &section)
 
   sectionItem->setIndex(index);
 
+  needsFit_ = true;
+
   return index;
 }
 
@@ -144,6 +150,8 @@ addCheck(const QString &name)
   auto index = CQCheckTreeIndex(checkItem->ind()); // root
 
   checkItem->setIndex(index);
+
+  needsFit_ = true;
 
   return index;
 }
@@ -179,6 +187,8 @@ addCheck(int sectionInd, const QString &name)
 
   checkItem->setIndex(index);
 
+  needsFit_ = true;
+
   return index;
 }
 
@@ -197,6 +207,8 @@ addCheck(int sectionInd, int subSectionInd, const QString &name)
   auto index = CQCheckTreeIndex(sectionInd, subSectionInd, checkItem->ind());
 
   checkItem->setIndex(index);
+
+  needsFit_ = true;
 
   return index;
 }
@@ -221,6 +233,9 @@ isItemChecked(const CQCheckTreeIndex &ind) const
 
   // section check
   auto *sectionItem = sections_[size_t(sectionInd)];
+
+  if (checkInd < 0)
+    return (sectionItem->checkState() == Qt::Checked);
 
   if (subSectionInd >= 0)
     return sectionItem->isItemChecked(subSectionInd, checkInd);
@@ -503,11 +518,86 @@ void
 CQCheckTree::
 fitColumns()
 {
+  // fit columns to contents
   tree_->resizeColumnToContents(0);
   tree_->resizeColumnToContents(1);
 
-  tree_->header()->setStretchLastSection(false);
-  tree_->header()->setStretchLastSection(true);
+  auto *header = tree_->header();
+
+  header->setStretchLastSection(false);
+  header->setStretchLastSection(true);
+
+  fitSize0_ = header->sectionSize(0);
+  fitSize1_ = header->sectionSize(1);
+
+  updateClipWidth();
+
+  //---
+
+  int minSize = 32;
+
+  if (clipWidth_ < 0) {
+    int w1 = std::max(header->sectionSize(0) + clipWidth_, minSize);
+
+    header->resizeSection(0, w1);
+
+    int w2 = tree_->width() - header->sectionSize(0) - header->sectionSize(1);
+
+    if (w2 < 0) {
+      int w3 = std::max(header->sectionSize(1) + w2, minSize);
+
+      header->resizeSection(1, w3);
+    }
+  }
+}
+
+void
+CQCheckTree::
+paintEvent(QPaintEvent *e)
+{
+  if (needsFit_) {
+    // force size recalc
+    fitSize0_ = -1;
+    fitSize1_ = -1;
+
+    autoFit();
+  }
+
+  QFrame::paintEvent(e);
+}
+
+void
+CQCheckTree::
+resizeEvent(QResizeEvent *e)
+{
+  autoFit();
+
+  QFrame::resizeEvent(e);
+}
+
+void
+CQCheckTree::
+autoFit()
+{
+  if (! isAutoFit())
+    return;
+
+  updateClipWidth();
+
+  if (clipWidth_ < 0)
+    fitColumns();
+}
+
+void
+CQCheckTree::
+updateClipWidth()
+{
+  int m = 4;
+
+  if (fitSize0_ > 0 && fitSize1_ > 0)
+    clipWidth_ = tree_->width() - fitSize0_ - fitSize1_ - 4*m;
+  else
+    clipWidth_ = -1;
 }
 
 CQCheckTree::Items
@@ -585,6 +675,13 @@ setHeaderLabels(const QStringList &labels)
   setColumnCount(2);
 
   QTreeWidget::setHeaderLabels(labels);
+}
+
+QModelIndex
+CQCheckTreeWidget::
+checkIndex(const CQCheckTreeItem *item)
+{
+  return indexFromItem(item, 1);
 }
 
 //------
@@ -714,6 +811,8 @@ setChecked(bool checked)
   for (uint i = 0; i < checks_.size(); ++i)
     checks_[i]->setChecked(checked);
 
+  updateCheck();
+
   emitDataChanged();
 }
 
@@ -800,6 +899,8 @@ setItemChecked(int checkInd, bool checked)
   auto *checkItem = checks_[size_t(checkInd)];
 
   checkItem->setChecked(checked);
+
+  checkItem->updateCheck();
 }
 
 void
@@ -985,4 +1086,34 @@ CQCheckTreeItem::
 CQCheckTreeItem(CQCheckTree *tree, int id) :
  QTreeWidgetItem(id), tree_(tree)
 {
+}
+
+QModelIndex
+CQCheckTreeItem::
+modelIndex() const
+{
+  auto *tree = tree_->tree();
+
+  return tree->checkIndex(this);
+}
+
+void
+CQCheckTreeItem::
+updateCheck()
+{
+  auto *tree = tree_->tree();
+
+  auto index = modelIndex();
+
+  tree->update(index);
+
+  auto pi = index.parent();
+
+  while (pi.isValid()) {
+    auto pi1 = tree->model()->index(pi.row(), 1, pi.parent());
+
+    tree->update(pi1);
+
+    pi = pi.parent();
+  }
 }

@@ -62,6 +62,10 @@ class CQCheckTreeItem : public QTreeWidgetItem {
   const CQCheckTreeIndex &index() const { return index_; }
   void setIndex(const CQCheckTreeIndex &v) { index_ = v; }
 
+  QModelIndex modelIndex() const;
+
+  void updateCheck();
+
  protected:
   CQCheckTree*     tree_ { nullptr };
   int              ind_  { -1 };
@@ -116,6 +120,8 @@ class CQCheckTreeSection : public CQCheckTreeItem {
 
   Items getAllItems() const;
   Items getCheckedItems() const;
+
+  //---
 
   QVariant data(int col, int role) const override {
     if (role == Qt::ToolTipRole && col == 0)
@@ -174,6 +180,8 @@ class CQCheckTreeCheck : public CQCheckTreeItem {
   bool isChecked() const { return checked_; }
   void setChecked(bool checked);
 
+  //---
+
   QVariant data(int col, int role) const override {
     if (role == Qt::ToolTipRole && col == 0)
       return hierName();
@@ -197,6 +205,8 @@ class CQCheckTreeWidget : public QTreeWidget {
 
   void setHeaderLabels(const QStringList &labels);
 
+  QModelIndex checkIndex(const CQCheckTreeItem *item);
+
  private:
   CQCheckTree *tree_ { nullptr };
 };
@@ -206,7 +216,8 @@ class CQCheckTreeWidget : public QTreeWidget {
 class CQCheckTree : public QFrame {
   Q_OBJECT
 
-  Q_PROPERTY(int checkSize READ checkSize WRITE setCheckSize)
+  Q_PROPERTY(int  checkSize READ checkSize WRITE setCheckSize)
+  Q_PROPERTY(bool autoFit   READ isAutoFit WRITE setAutoFit)
 
  public:
   using Items    = std::vector<CQCheckTreeItem *>;
@@ -217,16 +228,19 @@ class CQCheckTree : public QFrame {
   CQCheckTree(QWidget *parent=nullptr);
  ~CQCheckTree();
 
-  QTreeWidget *tree() const { return tree_; }
+  CQCheckTreeWidget *tree() const { return tree_; }
 
   int checkSize() const { return checkSize_; }
   void setCheckSize(int i) { checkSize_ = i; }
 
-  const Sections &sections() const { return sections_; }
-  const Checks &checks() const { return checks_; }
+  bool isAutoFit() const { return autoFit_; }
+  void setAutoFit(bool b) { autoFit_ = b; }
 
   const QChar &hierSep() const { return hierSep_; }
   void setHierSep(const QChar &v) { hierSep_ = v; }
+
+  const Sections &sections() const { return sections_; }
+  const Checks &checks() const { return checks_; }
 
   //---
 
@@ -259,6 +273,9 @@ class CQCheckTree : public QFrame {
   Items getAllItems() const;
   Items getCheckedItems() const;
 
+  void paintEvent(QPaintEvent *e) override;
+  void resizeEvent(QResizeEvent *e) override;
+
  private:
   friend class CQCheckTreeSection;
   friend class CQCheckTreeDelegate;
@@ -267,6 +284,10 @@ class CQCheckTree : public QFrame {
   CQCheckTreeItem *getModelItem(const QModelIndex &index) const;
 
   void emitChecked(CQCheckTreeSection *section, int itemNum, bool checked);
+
+  void autoFit();
+
+  void updateClipWidth();
 
  public Q_SLOTS:
   void expandAll();
@@ -286,12 +307,17 @@ class CQCheckTree : public QFrame {
   void itemClicked(const CQCheckTreeIndex &ind);
 
  private:
-  QTreeWidget *tree_      { nullptr };
-  int          checkSize_ { 12 };
-  QChar        hierSep_   { '/' };
-  Sections     sections_;
-  Checks       checks_;
-  QPoint       menuPos_;
+  CQCheckTreeWidget *tree_      { nullptr };
+  int                checkSize_ { 12 };
+  bool               autoFit_   { true };
+  bool               needsFit_  { true };
+  Sections           sections_;
+  Checks             checks_;
+  QPoint             menuPos_;
+  int                fitSize0_  { -1 };
+  int                fitSize1_  { -1 };
+  int                clipWidth_ { -1 };
+  QChar              hierSep_   { '/' };
 };
 
 #endif
