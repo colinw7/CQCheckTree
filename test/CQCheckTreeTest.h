@@ -5,7 +5,7 @@ class CQCheckTreeTest : public QWidget {
   Q_OBJECT
 
  public:
-  CQCheckTreeTest(QWidget *parent=0);
+  CQCheckTreeTest(QWidget *parent=nullptr);
 
  private slots:
   void itemChecked(const CQCheckTreeIndex &ind, bool checked);
